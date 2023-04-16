@@ -1,0 +1,86 @@
+# collecting of tweets
+import tweepy
+
+consumer_key = "your_consumer_key"
+consumer_secret = "your_consumer_secret"
+access_token = "your_access_token"
+access_token_secret = "your_access_token_secret"
+
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+
+api = tweepy.API(auth)
+
+query = "Formula 1 -filter:retweets"
+tweets = api.search_tweets(query, count=100)
+
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import string
+
+nltk.download('stopwords')
+nltk.download('punkt')
+
+stop_words = set(stopwords.words('english'))
+punctuation = set(string.punctuation)
+
+def preprocess(tweet):
+    tweet = tweet.lower()
+    tokens = word_tokenize(tweet)
+    tokens = [token for token in tokens if token not in stop_words and token not in punctuation]
+    return " ".join(tokens)
+    
+processed_tweets = [preprocess(tweet.text) for tweet in tweets]
+
+#filter the tweets based on key words
+
+positive_keywords = ['enjoy', 'amazing', 'love']
+negative_keywords = ['terrible', 'dificult', 'hate']
+
+labels = []
+for tweet in processed_tweets:
+    if any(keyword in tweet for keyword in positive_keywords):
+        labels.append('positive')
+    elif any(keyword in tweet for keyword in negative_keywords):
+        labels.append('negative')
+    else:
+        labels.append('neutral')
+
+# training of data set
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(processed_tweets, labels, test_size=0.2, random_state=42)
+
+
+#sentiment analyzer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
+vectorizer = CountVectorizer()
+X_train_vectorized = vectorizer.fit_transform(X_train)
+X_test_vectorized = vectorizer.transform(X_test)
+
+# Naive Bayes
+nb = MultinomialNB()
+nb.fit(X_train_vectorized, y_train)
+nb_pred = nb.predict(X_test_vectorized)
+
+# Support Vector Machine
+svm = LinearSVC()
+svm.fit(X_train_vectorized, y_train)
+svm_pred = svm.predict(X_test_vectorized)
+
+# Logistic Regression
+lr = LogisticRegression()
+lr.fit(X_train_vectorized, y_train)
+lr_pred = lr.predict(X_test_vectorized)
+
+# Evaluate performance
+print("Naive Bayes:")
+print("Accuracy:", accuracy_score(y_test, nb_pred))
+print("Precision:", precision_score(y_test, nb_pred
